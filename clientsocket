@@ -1,0 +1,44 @@
+from fastapi import FastAPI, HTTPException
+import socket
+import hashlib
+
+app = FastAPI()
+
+SERVER_HOST = "10.189.15.243"
+SERVER_PORT = 3347
+
+
+def send_socket_message(message: str) -> str:
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        client_socket.connect((SERVER_HOST, SERVER_PORT))
+        client_socket.sendall(message.encode("utf-8"))
+
+        response = client_socket.recv(1024).decode("utf-8")
+        return response
+
+    except Exception as e:
+        raise RuntimeError(str(e))
+
+    finally:
+        client_socket.close()
+
+
+@app.post("/send-message")
+def send_message(password: str):
+    try:
+        hashed_pwd = hashlib.sha256(password.encode()).hexdigest()
+
+        message = (
+            "115900000000000000010114510090010000000000300437072101145160200660900990010990000"
+        )
+
+        response = send_socket_message(message)
+
+        return {
+            "hashed_password": hashed_pwd,
+            "server_response": response
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
